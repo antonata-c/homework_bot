@@ -146,7 +146,7 @@ def main():
         except Exception:
             logger.exception('Произошла непредвиденная ошибка.')
             return
-        else:
+        finally:
             time.sleep(RETRY_PERIOD)
 
 
