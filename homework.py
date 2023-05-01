@@ -40,7 +40,7 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    """Проверка переменных окружения"""
+    """Проверка переменных окружения."""
     if not PRACTICUM_TOKEN or not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         error_msg = 'Отсутствуют необходимые переменные окружения.'
         logging.critical(error_msg)
@@ -48,7 +48,7 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    """Отправка сообщений посредством бота"""
+    """Отправка сообщений посредством бота."""
     chat_id = os.getenv('TELEGRAM_CHAT_ID')
     try:
         bot.send_message(chat_id, message)
@@ -59,7 +59,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    """Получение данных от api"""
+    """Получение данных от api."""
     url = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
     practicum_token = os.getenv('PRACTICUM_TOKEN')
     headers = {'Authorization': f'OAuth {practicum_token}'}
@@ -70,7 +70,7 @@ def get_api_answer(timestamp):
                                          headers=headers,
                                          params=payload)
     except Exception:
-        logger.exception(f'Эндпоинт не доступен.')
+        logger.exception('Эндпоинт не доступен.')
     else:
         if homework_statuses.status_code == HTTPStatus.OK:
             return homework_statuses.json()
@@ -82,7 +82,7 @@ def get_api_answer(timestamp):
 
 
 def check_response(response):
-    """Проверка изменения запроса"""
+    """Проверка изменения запроса."""
     fields = ['homeworks', 'current_date']
     if not isinstance(response, dict):
         logger.error(f'Тип {type(response)} не соответствует'
@@ -118,7 +118,7 @@ def parse_status(homework):
 def main():
     """Основная логика работы бота."""
     check_tokens()
-    timestamp = int(time.time() - 30 * 24 * 60 * 60)
+    timestamp = int(time.time())
     bot = Bot(token=TELEGRAM_TOKEN)
 
     HOMEWORK_INDEX = 0
