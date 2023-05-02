@@ -147,7 +147,7 @@ def main():
                 timestamp = response.get('current_date')
             else:
                 logger.info('Нет новых статусов.')
-        except EmptyResponseFromAPI as error:
+        except EmptyResponseFromAPI:
             logger.exception('Необходимое поле отсутствует.')
         except Exception as error:
             error_msg = f'Произошла непредвиденная ошибка. {error}'
