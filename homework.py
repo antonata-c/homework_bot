@@ -78,10 +78,9 @@ def get_api_answer(timestamp):
     try:
         homework_statuses = requests.get(**request_args)
     except Exception as error:
-        # logger.exception(f'Эндпоинт не доступен. {error}')
-        raise ConnectionError('Эндпоинт не доступен.'
+        raise ConnectionError('Эндпоинт не доступен. error={3}'
                               ' url={0}, params={1}, headers={2}'
-                              .format(*request_args.values()))
+                              .format(*request_args.values(), error))
     if homework_statuses.status_code != HTTPStatus.OK:
         error_msg = (f"Ошибка. Код -{homework_statuses.status_code}, "
                      f"Причина - {homework_statuses.reason}"
@@ -101,7 +100,7 @@ def check_response(response):
         raise TypeError(f'Тип {type(response)} не соответствует'
                         f' ожидаемому {type(list())})')
     if len(homeworks) > 0 and homeworks[0].get('homework_name') is None:
-        raise EmptyResponseFromAPI(f'Поле homework_name отсутствует.')
+        raise EmptyResponseFromAPI('Поле homework_name отсутствует.')
     return homeworks
 
 
@@ -122,8 +121,6 @@ def main():
 
     timestamp = 0
     bot = Bot(token=TELEGRAM_TOKEN)
-
-    HOMEWORK_INDEX = 0
 
     current_report = {
         'name': 'name',
