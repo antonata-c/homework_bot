@@ -4,11 +4,9 @@ import os
 import sys
 import time
 
-import requests
 from dotenv import load_dotenv
-from telegram import Bot
-# не пойму, а как я без этого импорта достану ошибку?
-from telegram.error import TelegramError
+import requests
+import telegram
 
 from exceptions import AccessError, EmptyResponseFromAPI
 
@@ -33,13 +31,16 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверка переменных окружения."""
-    # Но ведь тогда логироваться будет не имя, а значение переменной
-    env_variables = (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
+    env_variables = (
+        ('practicum_token', PRACTICUM_TOKEN),
+        ('telegram_token', TELEGRAM_TOKEN),
+        ('telegram_chat_id', TELEGRAM_CHAT_ID)
+    )
     variables_exist = True
-    for variable in env_variables:
+    for name, variable in env_variables:
         if not variable:
             logging.critical(f'Отсутствует переменная окружения'
-                             f' {variable}.')
+                             f' {name}.')
             variables_exist = False
     if not variables_exist:
         raise KeyError('Существуют не все необходимые переменные окружения.')
@@ -50,7 +51,7 @@ def send_message(bot, message):
     try:
         logger.debug(f'Отправляем сообщение "{message}".')
         bot.send_message(TELEGRAM_CHAT_ID, message)
-    except TelegramError as error:
+    except telegram.error.TelegramError as error:
         logger.error(f'Сообщение для id {TELEGRAM_CHAT_ID}'
                      f' не было доставлено. {error}')
         return False
@@ -117,7 +118,7 @@ def main():
     check_tokens()
 
     timestamp = 0
-    bot = Bot(token=TELEGRAM_TOKEN)
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
     current_report = {
         'name': 'name',
@@ -141,7 +142,7 @@ def main():
             if current_report != prev_report:
                 if send_message(bot, current_report.get('message')):
                     prev_report = current_report.copy()
-                    timestamp = response.get('current_date', 0)
+                    timestamp = response.get('current_date', timestamp)
             else:
                 logger.info('Нет новых статусов.')
         except EmptyResponseFromAPI:
