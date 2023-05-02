@@ -5,9 +5,10 @@ import sys
 import time
 
 import requests
-import telegram.error
 from dotenv import load_dotenv
 from telegram import Bot
+# не пойму, а как я без этого импорта достану ошибку?
+from telegram.error import TelegramError
 
 from exceptions import AccessError, EmptyResponseFromAPI
 
@@ -32,29 +33,25 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверка переменных окружения."""
-    # не понял как получить имя переменной, поэтому сделал словарь
-    env_variables = {
-        'practicum_token': PRACTICUM_TOKEN,
-        'telegram_token': TELEGRAM_TOKEN,
-        'telegram_chat_id': TELEGRAM_CHAT_ID
-    }
+    # Но ведь тогда логироваться будет не имя, а значение переменной
+    env_variables = (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
     variables_exist = True
-    for name, variable in env_variables.items():
+    for variable in env_variables:
         if not variable:
             logging.critical(f'Отсутствует переменная окружения'
-                             f' {name}.')
+                             f' {variable}.')
             variables_exist = False
-    return variables_exist
+    if not variables_exist:
+        raise KeyError('Существуют не все необходимые переменные окружения.')
 
 
 def send_message(bot, message):
     """Отправка сообщений посредством бота."""
-    chat_id = TELEGRAM_CHAT_ID
     try:
         logger.debug(f'Отправляем сообщение "{message}".')
-        bot.send_message(chat_id, message)
-    except telegram.error.TelegramError as error:
-        logger.error(f'Сообщение для id {chat_id}'
+        bot.send_message(TELEGRAM_CHAT_ID, message)
+    except TelegramError as error:
+        logger.error(f'Сообщение для id {TELEGRAM_CHAT_ID}'
                      f' не было доставлено. {error}')
         return False
     else:
@@ -95,12 +92,12 @@ def check_response(response):
     if not isinstance(response, dict):
         raise TypeError(f'Тип {type(response)} не соответствует'
                         f' ожидаемому {type(dict())}')
+    if 'homeworks' not in response:
+        raise EmptyResponseFromAPI('Поле homeworks отсутствует.')
     homeworks = response.get('homeworks')
     if not isinstance(homeworks, list):
         raise TypeError(f'Тип {type(response)} не соответствует'
                         f' ожидаемому {type(list())})')
-    if len(homeworks) > 0 and homeworks[0].get('homework_name') is None:
-        raise EmptyResponseFromAPI('Поле homework_name отсутствует.')
     return homeworks
 
 
@@ -117,7 +114,7 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    assert check_tokens()
+    check_tokens()
 
     timestamp = 0
     bot = Bot(token=TELEGRAM_TOKEN)
@@ -142,9 +139,9 @@ def main():
             else:
                 current_report['message'] = 'Нет новых статусов.'
             if current_report != prev_report:
-                assert send_message(bot, current_report.get('message'))
-                prev_report = current_report.copy()
-                timestamp = response.get('current_date')
+                if send_message(bot, current_report.get('message')):
+                    prev_report = current_report.copy()
+                    timestamp = response.get('current_date', 0)
             else:
                 logger.info('Нет новых статусов.')
         except EmptyResponseFromAPI:
@@ -154,9 +151,8 @@ def main():
             current_report['message'] = error_msg
             logger.exception(error_msg)
             if current_report != prev_report:
-                assert send_message(bot, error_msg)
+                send_message(bot, error_msg)
                 prev_report = current_report.copy()
-            return
         finally:
             time.sleep(RETRY_PERIOD)
 
@@ -164,7 +160,8 @@ def main():
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     stream_handler = logging.StreamHandler(stream=sys.stdout)
-    file_handler = logging.FileHandler(f'{__file__[:__file__.find(".")]}.log')
+    file_handler = logging.FileHandler(f'{__file__[:__file__.find(".")]}.log',
+                                       encoding='utf-8')
     format = ('(%(asctime)s | %(funcName)s | '
               '%(lineno)d) - [%(levelname)s]'
               ' - %(message)s')
